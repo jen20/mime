@@ -128,7 +128,14 @@ func TestWriterBoundaryGoroutines(t *testing.T) {
 	<-done
 }
 
-func TestSortHeader(t *testing.T) {
+func TestSortedHeader(t *testing.T) {
+	buf := bytes.NewBufferString("")
+	mimeWriter := NewWriter(buf)
+	if err := mimeWriter.SetBoundary("MIMEBOUNDRY"); err != nil {
+		t.Fatalf("Error setting mime boundry: %s", err.Error())
+	}
+	defer mimeWriter.Close()
+
 	header := textproto.MIMEHeader{}
 
 	header.Set("Z", "1")
@@ -136,12 +143,14 @@ func TestSortHeader(t *testing.T) {
 	header.Set("M", "3")
 	header.Set("C", "4")
 
-	kvs := sortHeader(header)
+	part, err := mimeWriter.CreatePart(header)
+	if err != nil {
+		t.Fatalf("Unable to create part: %s", err.Error())
+	}
+	part.Write([]byte("foo"))
 
-	expected := []string{"A", "C", "M", "Z"}
-	for i, kv := range kvs {
-		if expected[i] != kv.Key {
-			t.Fatalf("Out of order: %s, %s", expected[i], kv.Key)
-		}
+	expected := "--MIMEBOUNDRY\r\nA: 2\r\nC: 4\r\nM: 3\r\nZ: 1\r\n\r\nfoo"
+	if expected != buf.String() {
+		t.Fatalf("There was a problem with the output, expected: %q got: %q", expected, buf.String())
 	}
 }

@@ -79,46 +79,6 @@ func randomBoundary() string {
 	return fmt.Sprintf("%x", buf[:])
 }
 
-type keyValues struct {
-	Key    string
-	Values []string
-}
-
-type keyValuesSorter struct {
-	KVS []keyValues
-}
-
-func (s *keyValuesSorter) Len() int {
-	return len(s.KVS)
-}
-
-func (s *keyValuesSorter) Swap(i int, j int) {
-	s.KVS[i], s.KVS[j] = s.KVS[j], s.KVS[i]
-}
-
-func (s *keyValuesSorter) Less(i int, j int) bool {
-	return s.KVS[i].Key < s.KVS[j].Key
-}
-
-func sortHeader(header textproto.MIMEHeader) []keyValues {
-	var kvs []keyValues
-
-	for k, vs := range header {
-		kvs = append(kvs, keyValues{
-			Key:    k,
-			Values: vs,
-		})
-	}
-
-	sorter := &keyValuesSorter{
-		KVS: kvs,
-	}
-
-	sort.Sort(sorter)
-
-	return kvs
-}
-
 // CreatePart creates a new multipart section with the provided
 // header. The body of the part should be written to the returned
 // Writer. After calling CreatePart, any previous part may no longer
@@ -135,14 +95,16 @@ func (w *Writer) CreatePart(header textproto.MIMEHeader) (io.Writer, error) {
 	} else {
 		fmt.Fprintf(&b, "--%s\r\n", w.boundary)
 	}
-	// TODO(bradfitz): move this to textproto.MimeHeader.Write(w), have it sort
-	// and clean, like http.Header.Write(w) does.
 
-	kvs := sortHeader(header)
+	var keys []string
+	for k := range header {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	for _, kv := range kvs {
-		for _, v := range kv.Values {
-			fmt.Fprintf(&b, "%s: %s\r\n", kv.Key, v)
+	for _, k := range keys {
+		for _, v := range header[k] {
+			fmt.Fprintf(&b, "%s: %s\r\n", k, v)
 		}
 	}
 	fmt.Fprintf(&b, "\r\n")
