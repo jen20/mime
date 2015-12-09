@@ -96,7 +96,7 @@ func (w *Writer) CreatePart(header textproto.MIMEHeader) (io.Writer, error) {
 		fmt.Fprintf(&b, "--%s\r\n", w.boundary)
 	}
 
-	var keys []string
+	keys := make([]string, 0, len(header))
 	for k := range header {
 		keys = append(keys, k)
 	}
