@@ -129,28 +129,24 @@ func TestWriterBoundaryGoroutines(t *testing.T) {
 }
 
 func TestSortedHeader(t *testing.T) {
-	buf := bytes.NewBufferString("")
-	mimeWriter := NewWriter(buf)
-	if err := mimeWriter.SetBoundary("MIMEBOUNDRY"); err != nil {
-		t.Fatalf("Error setting mime boundry: %s", err.Error())
+	var buf bytes.Buffer
+	mimeWriter := NewWriter(&buf)
+	if err := mimeWriter.SetBoundary("MIMEBOUNDARY"); err != nil {
+		t.Fatalf("Error setting mime boundary: %v", err)
 	}
-	defer mimeWriter.Close()
 
-	header := textproto.MIMEHeader{}
-
-	header.Set("Z", "1")
-	header.Set("A", "2")
-	header.Set("M", "3")
-	header.Set("C", "4")
+	header := textproto.MIMEHeader{"Z": {"1"}, "A": {"2"}, "M": {"3"}, "C": {"4"}}
 
 	part, err := mimeWriter.CreatePart(header)
 	if err != nil {
-		t.Fatalf("Unable to create part: %s", err.Error())
+		t.Fatalf("Unable to create part: %v", err)
 	}
 	part.Write([]byte("foo"))
 
-	expected := "--MIMEBOUNDRY\r\nA: 2\r\nC: 4\r\nM: 3\r\nZ: 1\r\n\r\nfoo"
-	if expected != buf.String() {
-		t.Fatalf("There was a problem with the output, expected: %q got: %q", expected, buf.String())
+	mimeWriter.Close()
+
+	want := "--MIMEBOUNDARY\r\nA: 2\r\nC: 4\r\nM: 3\r\nZ: 1\r\n\r\nfoo\r\n--MIMEBOUNDARY--\r\n"
+	if want != buf.String() {
+		t.Fatalf("\n got: %q\nwant: %q\n", buf.String(), want)
 	}
 }
