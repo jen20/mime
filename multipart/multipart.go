@@ -19,8 +19,9 @@ import (
 	"io"
 	"io/ioutil"
 	"mime"
-	"mime/quotedprintable"
 	"net/textproto"
+	
+	"github.com/sthulb/mime/quotedprintable"
 )
 
 var emptyParams = make(map[string]string)
